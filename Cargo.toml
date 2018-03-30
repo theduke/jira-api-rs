@@ -1,0 +1,16 @@
+[package]
+name = "jira-api-rs"
+version = "0.1.0"
+authors = ["Christoph Herzog <chris@theduke.at>"]
+
+[dependencies]
+serde = "1.0.36"
+serde_json = "1.0.13"
+serde_derive = "1.0.36"
+chrono = { version = "0.4.1", features = ["serde"] }
+slog = "2.2.3"
+sloggers = "0.2.6"
+failure = "0.1.1"
+reqwest = { version = "0.8.5", features = ["unstable"] }
+futures = "0.1.20"
+tokio-core = "0.1.16"

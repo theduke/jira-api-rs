@@ -1,0 +1,96 @@
+#! /usr/bin/env run-cargo-script
+
+//!
+//! ```cargo
+//! [dependencies]
+//! Inflector = "*"
+//! serde_json = "*"
+//! quote = "*"
+//! syn = "*"
+//! ```
+
+extern crate serde_json;
+#[macro_use]
+extern crate quote;
+extern crate syn;
+extern crate inflector;
+
+use std::io::Read;
+
+use quote::Tokens;
+use syn::Ident;
+use serde_json::{Value, map};
+use inflector::Inflector;
+
+type Obj = map::Map<String, Value>;
+
+fn obj_to_struct(name: &str, obj: &Obj) -> Tokens {
+
+    let mut types = Vec::new();
+
+    let mut fields = Vec::new();
+
+    for (key, val) in obj.iter() {
+        let key_snake = key.to_snake_case();
+
+        let (name, attr) = if &key_snake != key {
+            let attr = quote!(#[serde(rename = #key)]);
+            (Ident::from(key_snake.as_str()), Some(attr))
+        } else {
+            (Ident::from(key.as_str()), None)
+        };
+
+        let typ = value_to_type(val, Some(&key_snake), &mut types);
+
+        fields.push(quote!(#attr pub #name: #typ,));
+    }
+    let name = Ident::from(name);
+    let t = quote!{
+        #[derive(Serialize, Deserialize, Clone, Debug)]
+        pub struct #name {
+            #(#fields)*
+        }
+    };
+    types.push(t);
+
+    quote!{
+        #(#types)*
+    }
+}
+
+fn value_to_type(val: &Value, name: Option<&str>, types: &mut Vec<Tokens>) -> Tokens {
+    match val {
+        &Value::Null => quote!(Option<T>),
+        &Value::Bool(_) => quote!(bool),
+        &Value::Number(_) => quote!(i64),
+        &Value::String(_) => quote!(String),
+        &Value::Array(ref vals) => {
+            if vals.len() < 1 {
+                quote!(Vec<T>)
+            } else {
+                let t = value_to_type(&vals[0], name, types);
+                quote!(Vec<#t>)
+            }
+        }
+        &Value::Object(ref obj) => {
+            let obj_name = name.unwrap().to_class_case();
+            types.push(obj_to_struct(&obj_name, obj));
+            let obj_ident = Ident::from(obj_name.as_str());
+            quote!(#obj_ident)
+        },
+    }
+}
+
+fn main() {
+    let mut buf = Vec::new();
+    ::std::io::stdin().read_to_end(&mut buf).unwrap();
+
+    let data: ::serde_json::Value = ::serde_json::from_slice(&buf).unwrap();
+    let obj = data.as_object().unwrap();
+
+    let name = ::std::env::args().skip(1).next().unwrap();
+    let def = obj_to_struct(&name, obj);
+
+    println!("{}", def);
+}
+
