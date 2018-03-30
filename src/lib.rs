@@ -217,7 +217,7 @@ pub struct Auditing {
 }
 
 impl Auditing {
-    fn list(
+    pub fn list(
         &self,
         filter: AuditingFilter,
     ) -> impl Future<Item = PaginatedAuditRecords, Error = Error> {
@@ -238,6 +238,46 @@ impl Auditing {
         if let Some(val) = filter.to.as_ref() {
             url.query_pairs_mut().append_pair("to", &val.to_string());
         }
+        self.client.get_json(url)
+    }
+}
+
+pub struct Avatars {
+    client: Jira,
+}
+
+impl Avatars {
+    pub fn list(&self, _type: &str) -> impl Future<Item = AvatarResponse, Error = Error> {
+        let url = self.client
+            .endpoint
+            .join(&format!("avatar/{}/system", _type))
+            .unwrap();
+        self.client.get_json(url)
+    }
+}
+
+pub struct Comments {
+    client: Jira,
+}
+
+impl Comments {
+    pub fn properties(
+        &self,
+        comment_id: &str,
+    ) -> impl Future<Item = CommentPropertiesResponse, Error = Error> {
+        let url = self.client
+            .endpoint
+            .join(&format!("comment/{}/properties", comment_id))
+            .unwrap();
+        self.client.get_json(url)
+    }
+
+    pub fn property(&self, comment_id: &str, property_key: &str) -> impl Future<Item=CommentProperty, Error=Error>
+    {
+        let url = self.client
+            .endpoint
+            .join(&format!("comment/{}/properties/{}", comment_id, property_key))
+            .unwrap();
         self.client.get_json(url)
     }
 }

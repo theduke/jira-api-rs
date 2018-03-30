@@ -10,6 +10,12 @@ pub use self::attachments::*;
 mod auditing;
 pub use self::auditing::*;
 
+mod avatars;
+pub use self::avatars::*;
+
+mod comments;
+pub use self::comments::*;
+
 use chrono;
 
 pub type DateTime = chrono::DateTime<chrono::Utc>;
